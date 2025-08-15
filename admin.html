@@ -191,10 +191,16 @@
             const currentLang = localStorage.getItem('language') || 'ru';
             const confirmMessage = locales[currentLang].deleteConfirm.replace('{email}', email);
             
-            if (!confirm(confirmMessage)) {
-                return;
-            }
+            showConfirmDialog(confirmMessage, () => {
+                // User confirmed, proceed with deletion
+                performDeleteSubscriber(id, email, currentLang);
+            });
 
+            return;
+        }
+
+        // Perform the actual delete operation
+        async function performDeleteSubscriber(id, email, currentLang) {
             try {
                 const response = await fetch(`/api/subscriptions/${id}`, {
                     method: 'DELETE',
@@ -212,13 +218,13 @@
                     // Reset checkboxes and bulk delete button
                     resetCheckboxes();
                     
-                    alert(locales[currentLang].deleteSuccess);
+                    showNotification(locales[currentLang].deleteSuccess, 'success');
                 } else {
-                    alert('Ошибка: ' + data.message);
+                    showNotification('Ошибка: ' + data.message, 'error');
                 }
             } catch (error) {
                 console.error('Error deleting subscriber:', error);
-                alert(locales[currentLang].connectionErrorAdmin);
+                showNotification(locales[currentLang].connectionErrorAdmin, 'error');
             }
         }
 
@@ -257,17 +263,23 @@
             
             if (selectedIds.length === 0) {
                 const currentLang = localStorage.getItem('language') || 'ru';
-                alert(locales[currentLang].selectSubscriptionsToDelete || 'Пожалуйста, выберите подписки для удаления.');
+                showNotification(locales[currentLang].selectSubscriptionsToDelete || 'Пожалуйста, выберите подписки для удаления.', 'warning');
                 return;
             }
 
             const currentLang = localStorage.getItem('language') || 'ru';
             const confirmMessage = locales[currentLang].bulkDeleteConfirm.replace('{count}', selectedIds.length);
 
-            if (!confirm(confirmMessage)) {
-                return;
-            }
+            showConfirmDialog(confirmMessage, () => {
+                // User confirmed, proceed with deletion
+                performBulkDelete(selectedIds, currentLang);
+            });
 
+            return;
+        }
+
+        // Perform the actual bulk delete operation
+        async function performBulkDelete(selectedIds, currentLang) {
             try {
                 const response = await fetch('/api/subscriptions/bulk-delete', {
                     method: 'POST',
@@ -292,14 +304,14 @@
                     // Reset checkboxes and bulk delete button
                     resetCheckboxes();
                     
-                    alert(locales[currentLang].bulkDeleteSuccess);
+                    showNotification(locales[currentLang].bulkDeleteSuccess, 'success');
                 } else {
                     const currentLang = localStorage.getItem('language') || 'ru';
-                    alert(locales[currentLang].errorToggle + data.message);
+                    showNotification(locales[currentLang].errorToggle + data.message, 'error');
                 }
             } catch (error) {
                 console.error('Error bulk deleting subscribers:', error);
-                alert(locales[currentLang].connectionErrorAdmin);
+                showNotification(locales[currentLang].connectionErrorAdmin, 'error');
             }
         }
 
@@ -313,6 +325,103 @@
         function showError(message) {
             document.getElementById('subscriptionsList').innerHTML = 
                 `<div class="error">${message}</div>`;
+        }
+
+        // Notification system for admin panel
+        function showNotification(message, type = 'info') {
+            // Remove existing notifications
+            const existingNotifications = document.querySelectorAll('.notification');
+            existingNotifications.forEach(notification => notification.remove());
+            
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.style.animation = 'slideOut 0.3s ease';
+                    setTimeout(() => {
+                        if (notification.parentNode) {
+                            notification.remove();
+                        }
+                    }, 300);
+                }
+            }, 5000);
+            
+            // Add click to dismiss
+            notification.addEventListener('click', () => {
+                notification.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.remove();
+                    }
+                }, 300);
+            });
+        }
+
+        // Confirmation dialog system
+        function showConfirmDialog(message, onConfirm, onCancel) {
+            // Remove existing dialogs
+            const existingDialogs = document.querySelectorAll('.confirm-dialog');
+            existingDialogs.forEach(dialog => dialog.remove());
+            
+            const dialog = document.createElement('div');
+            dialog.className = 'confirm-dialog';
+            const currentLang = localStorage.getItem('language') || 'ru';
+            dialog.innerHTML = `
+                <div class="confirm-dialog-content">
+                    <div class="confirm-dialog-message">${message}</div>
+                    <div class="confirm-dialog-buttons">
+                        <button class="btn btn-primary confirm-btn">${locales[currentLang].confirm}</button>
+                        <button class="btn cancel-btn">${locales[currentLang].cancel}</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(dialog);
+            
+            // Add event listeners
+            dialog.querySelector('.confirm-btn').addEventListener('click', () => {
+                dialog.remove();
+                if (onConfirm) onConfirm();
+            });
+            
+            dialog.querySelector('.cancel-btn').addEventListener('click', () => {
+                dialog.remove();
+                if (onCancel) onCancel();
+            });
+            
+            // Keyboard support
+            const handleKeydown = (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    dialog.remove();
+                    if (onConfirm) onConfirm();
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    dialog.remove();
+                    if (onCancel) onCancel();
+                }
+            };
+            
+            document.addEventListener('keydown', handleKeydown);
+            
+            // Auto focus on confirm button
+            setTimeout(() => {
+                dialog.querySelector('.confirm-btn').focus();
+            }, 100);
+            
+            // Cleanup event listener when dialog is removed
+            const observer = new MutationObserver(() => {
+                if (!document.body.contains(dialog)) {
+                    document.removeEventListener('keydown', handleKeydown);
+                    observer.disconnect();
+                }
+            });
+            observer.observe(document.body, { childList: true, subtree: true });
         }
 
         // Function to toggle select all checkboxes
