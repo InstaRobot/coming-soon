@@ -75,3 +75,8 @@ npm-shrinkwrap.json
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+docker-compose.prod.yml
