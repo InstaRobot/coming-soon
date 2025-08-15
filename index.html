@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Скоро открытие - Coming Soon</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <div class="content">
+            <div class="logo">
+                <h1 data-i18n="logo">LOGO</h1>
+            </div>
+            
+            <div class="language-switcher-container">
+                <!-- Language switcher will be inserted here -->
+            </div>
+            
+            <div class="main-text">
+                <h2 data-i18n="mainHeading">Скоро открытие</h2>
+                <p data-i18n="mainDescription">Мы работаем над чем-то удивительным. Оставайтесь с нами!</p>
+            </div>
+            
+            <div class="countdown">
+                <div class="countdown-item">
+                    <span class="number" id="days">00</span>
+                    <span class="label" data-i18n="days">Дней</span>
+                </div>
+                <div class="countdown-item">
+                    <span class="number" id="hours">00</span>
+                    <span class="label" data-i18n="hours">Часов</span>
+                </div>
+                <div class="countdown-item">
+                    <span class="number" id="minutes">00</span>
+                    <span class="label" data-i18n="minutes">Минут</span>
+                </div>
+                <div class="countdown-item">
+                    <span class="number" id="seconds">00</span>
+                    <span class="label" data-i18n="seconds">Секунд</span>
+                </div>
+            </div>
+            
+            <div class="newsletter">
+                <h3 data-i18n="newsletterTitle">Уведомить об открытии</h3>
+                <form class="email-form">
+                    <input type="email" placeholder="Введите ваш email" data-i18n="emailPlaceholder" required>
+                    <button type="submit" data-i18n="subscribeButton">Подписаться</button>
+                </form>
+            </div>
+            
+            <div class="social-links">
+                <a href="#" class="social-link">Facebook</a>
+                <a href="#" class="social-link">Twitter</a>
+                <a href="#" class="social-link">Instagram</a>
+            </div>
+        </div>
+        
+        <div class="background-animation">
+            <div class="floating-shape shape-1"></div>
+            <div class="floating-shape shape-2"></div>
+            <div class="floating-shape shape-3"></div>
+        </div>
+    </div>
+    
+    <script src="locales.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
+

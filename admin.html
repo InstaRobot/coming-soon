@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Админ-панель - Подписки</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="locales.js"></script>
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-content">
+                <div>
+                    <h1 data-i18n="adminPanelTitle">📧 Админ-панель подписок</h1>
+                    <p data-i18n="adminPanelDescription">Управление email подписками на уведомления</p>
+                </div>
+                <div class="user-info">
+                    <span id="userDisplay" data-i18n="administrator">Администратор</span>
+                    <button class="btn btn-logout" onclick="logout()" data-i18n="logout">🚪 Выйти</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="language-switcher-container">
+            <!-- Language switcher will be inserted here -->
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number" id="totalSubscriptions">-</div>
+                <div class="stat-label" data-i18n="totalSubscriptions">Всего подписок</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="activeSubscriptions">-</div>
+                <div class="stat-label" data-i18n="activeSubscriptions">Активные</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="todaySubscriptions">-</div>
+                <div class="stat-label" data-i18n="todaySubscriptions">Сегодня</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-primary" onclick="refreshData()" data-i18n="refresh">🔄 Обновить</button>
+            <button class="btn" onclick="exportData()" data-i18n="exportCSV">📥 Экспорт CSV</button>
+            <input type="text" class="search-box" id="searchBox" data-i18n="searchPlaceholder" placeholder="Поиск по email..." oninput="filterSubscriptions()">
+        </div>
+
+        <div class="subscriptions-table">
+            <div class="table-header">
+                <div data-i18n="id">ID</div>
+                <div data-i18n="email">Email</div>
+                <div data-i18n="subscriptionDate">Дата подписки</div>
+                <div data-i18n="status">Статус</div>
+                <div data-i18n="actions">Действия</div>
+            </div>
+            <div id="subscriptionsList">
+                <div class="loading" data-i18n="loadingSubscriptions">Загрузка подписок...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allSubscriptions = [];
+        let filteredSubscriptions = [];
+
+        // Check authentication on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize language system
+            initLanguage();
+            
+            // Add language switcher to the page
+            const switcherContainer = document.querySelector('.language-switcher-container');
+            if (switcherContainer) {
+                switcherContainer.appendChild(createLanguageSwitcher());
+            }
+            
+            checkAuth();
+        });
+
+        // Check if user is authenticated
+        async function checkAuth() {
+            try {
+                const response = await fetch('/api/admin/check-auth', {
+                    credentials: 'include'
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('userDisplay').textContent = data.user.username;
+                    loadSubscriptions();
+                } else {
+                    // Not authenticated, redirect to login
+                    window.location.href = '/admin-login.html';
+                }
+            } catch (error) {
+                console.error('Auth check error:', error);
+                window.location.href = '/admin-login.html';
+            }
+        }
+
+        // Logout function
+        async function logout() {
+            try {
+                await fetch('/api/admin/logout', {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                
+                // Redirect to login page
+                window.location.href = '/admin-login.html';
+            } catch (error) {
+                console.error('Logout error:', error);
+                // Still redirect even if logout fails
+                window.location.href = '/admin-login.html';
+            }
+        }
+
+        // Load subscriptions from API
+        async function loadSubscriptions() {
+            try {
+                const response = await fetch('/api/subscriptions', {
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    allSubscriptions = data.subscriptions;
+                    filteredSubscriptions = [...allSubscriptions];
+                    updateStats();
+                    renderSubscriptions();
+                } else {
+                    showError('Ошибка загрузки подписок: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error loading subscriptions:', error);
+                showError('Ошибка соединения с сервером');
+            }
+        }
+
+        // Update statistics
+        function updateStats() {
+            const total = allSubscriptions.length;
+            const active = allSubscriptions.filter(sub => sub.status === 'active').length;
+            const today = allSubscriptions.filter(sub => {
+                const today = new Date().toDateString();
+                const subDate = new Date(sub.subscribed_at).toDateString();
+                return today === subDate;
+            }).length;
+
+            document.getElementById('totalSubscriptions').textContent = total;
+            document.getElementById('activeSubscriptions').textContent = active;
+            document.getElementById('todaySubscriptions').textContent = today;
+        }
+
+        // Render subscriptions table
+        function renderSubscriptions() {
+            const container = document.getElementById('subscriptionsList');
+            
+            if (filteredSubscriptions.length === 0) {
+                container.innerHTML = '<div class="loading">Подписки не найдены</div>';
+                return;
+            }
+
+            container.innerHTML = filteredSubscriptions.map(sub => `
+                <div class="table-row">
+                    <div>${sub.id}</div>
+                    <div>${sub.email}</div>
+                    <div>${formatDate(sub.subscribed_at)}</div>
+                    <div class="status-${sub.status}">${getStatusText(sub.status)}</div>
+                    <div>
+                        <button class="btn" onclick="toggleStatus(${sub.id}, '${sub.status}')">
+                            ${sub.status === 'active' ? 'Отписать' : 'Подписать'}
+                        </button>
+                        <button class="btn btn-danger" onclick="deleteSubscriber(${sub.id}, '${sub.email}')" data-i18n="delete">
+                            Удалить
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Filter subscriptions by search
+        function filterSubscriptions() {
+            const searchTerm = document.getElementById('searchBox').value.toLowerCase();
+            
+            if (!searchTerm) {
+                filteredSubscriptions = [...allSubscriptions];
+            } else {
+                filteredSubscriptions = allSubscriptions.filter(sub => 
+                    sub.email.toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            renderSubscriptions();
+        }
+
+        // Toggle subscription status
+        async function toggleStatus(id, currentStatus) {
+            const newStatus = currentStatus === 'active' ? 'unsubscribed' : 'active';
+            const email = allSubscriptions.find(sub => sub.id === id)?.email;
+            
+            if (!email) return;
+
+            try {
+                const response = await fetch('/api/unsubscribe', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ email })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Update local data
+                    const subscription = allSubscriptions.find(sub => sub.id === id);
+                    if (subscription) {
+                        subscription.status = newStatus;
+                        updateStats();
+                        renderSubscriptions();
+                    }
+                } else {
+                    alert('Ошибка: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error toggling status:', error);
+                alert('Ошибка соединения с сервером');
+            }
+        }
+
+        // Delete subscriber
+        async function deleteSubscriber(id, email) {
+            const currentLang = localStorage.getItem('language') || 'ru';
+            const confirmMessage = locales[currentLang].deleteConfirm.replace('{email}', email);
+            
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/subscriptions/${id}`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Remove from local data
+                    allSubscriptions = allSubscriptions.filter(sub => sub.id !== id);
+                    filteredSubscriptions = filteredSubscriptions.filter(sub => sub.id !== id);
+                    updateStats();
+                    renderSubscriptions();
+                    alert(locales[currentLang].deleteSuccess);
+                } else {
+                    alert('Ошибка: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error deleting subscriber:', error);
+                alert(locales[currentLang].connectionErrorAdmin);
+            }
+        }
+
+        // Refresh data
+        function refreshData() {
+            loadSubscriptions();
+        }
+
+        // Export data to CSV
+        function exportData() {
+            const csvContent = [
+                ['ID', 'Email', 'Дата подписки', 'Статус'],
+                ...allSubscriptions.map(sub => [
+                    sub.id,
+                    sub.email,
+                    sub.subscribed_at,
+                    sub.status
+                ])
+            ].map(row => row.join(',')).join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `subscriptions_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Helper functions
+        function formatDate(dateString) {
+            return new Date(dateString).toLocaleString('ru-RU');
+        }
+
+        function getStatusText(status) {
+            return status === 'active' ? 'Активна' : 'Отписана';
+        }
+
+        function showError(message) {
+            document.getElementById('subscriptionsList').innerHTML = 
+                `<div class="error">${message}</div>`;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+User-agent: *
+Disallow: /admin
+Disallow: /admin-login
+Disallow: /api/
+Disallow: /css/
+Disallow: /script.js
+Disallow: /locales.js
+Disallow: /server.js
+Disallow: /package.json
+Disallow: /init-db.js
+Disallow: /subscriptions.db
+Disallow: /node_modules/
+Disallow: /.git/
+Disallow: /.env
+
+# Разрешаем индексацию главной страницы
+Allow: /
+Allow: /index.html
+
+# Указываем расположение sitemap (если будет создан)
+# Sitemap: https://yoursite.com/sitemap.xml
+
+# Задержка между запросами (в секундах)
+Crawl-delay: 1

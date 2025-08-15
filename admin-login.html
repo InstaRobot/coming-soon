@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вход в админ-панель</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="locales.js"></script>
+    <link rel="stylesheet" href="css/admin-login.css">
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">
+            <h1 data-i18n="adminLoginTitle">🔐 Админ-панель</h1>
+        </div>
+
+        <div class="error-message" id="errorMessage"></div>
+        <div class="success-message" id="successMessage"></div>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="username" data-i18n="username">Логин</label>
+                <input type="text" id="username" name="username" data-i18n="usernamePlaceholder" placeholder="Введите логин" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password" data-i18n="password">Пароль</label>
+                <input type="password" id="password" name="password" data-i18n="passwordPlaceholder" placeholder="Введите пароль" required>
+            </div>
+
+            <button type="submit" class="login-btn" id="loginBtn">
+                <span class="btn-text" data-i18n="loginButton">Войти</span>
+            </button>
+        </form>
+
+        <a href="/" class="back-link" data-i18n="backToMain">← Вернуться на главную</a>
+    </div>
+
+    <script>
+        const loginForm = document.getElementById('loginForm');
+        const loginBtn = document.getElementById('loginBtn');
+        const btnText = document.querySelector('.btn-text');
+        const errorMessage = document.getElementById('errorMessage');
+        const successMessage = document.getElementById('successMessage');
+
+        // Check if already authenticated
+        async function checkAuth() {
+            try {
+                const response = await fetch('/api/admin/check-auth', {
+                    credentials: 'include'
+                });
+                
+                if (response.ok) {
+                    // Already authenticated, redirect to admin panel
+                    window.location.href = '/admin.html';
+                }
+            } catch (error) {
+                // Not authenticated, stay on login page
+            }
+        }
+
+        // Initialize language system
+        initLanguage();
+        
+        // Check auth on page load
+        checkAuth();
+
+        loginForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            
+            if (!username || !password) {
+                const currentLang = localStorage.getItem('language') || 'ru';
+                showError(locales[currentLang].fillAllFields);
+                return;
+            }
+            
+            // Disable form during submission
+            const currentLang = localStorage.getItem('language') || 'ru';
+            loginBtn.disabled = true;
+            btnText.innerHTML = `<span class="loading"></span>${locales[currentLang].loggingIn}`;
+            
+            try {
+                const response = await fetch('/api/admin/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showSuccess(locales[currentLang].loginSuccess);
+                    setTimeout(() => {
+                        window.location.href = '/admin.html';
+                    }, 1000);
+                } else {
+                    showError(data.message || locales[currentLang].authError);
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                showError(locales[currentLang].connectionError);
+            } finally {
+                // Re-enable form
+                loginBtn.disabled = false;
+                btnText.textContent = locales[currentLang].loginButton;
+            }
+        });
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+            successMessage.style.display = 'none';
+            
+            setTimeout(() => {
+                errorMessage.style.display = 'none';
+            }, 5000);
+        }
+
+        function showSuccess(message) {
+            successMessage.textContent = message;
+            successMessage.style.display = 'block';
+            errorMessage.style.display = 'none';
+        }
+
+        // Clear messages when user starts typing
+        document.getElementById('username').addEventListener('input', () => {
+            errorMessage.style.display = 'none';
+            successMessage.style.display = 'none';
+        });
+
+        document.getElementById('password').addEventListener('input', () => {
+            errorMessage.style.display = 'none';
+            successMessage.style.display = 'none';
+        });
+    </script>
+</body>
+</html>
