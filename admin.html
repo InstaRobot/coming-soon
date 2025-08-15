@@ -33,10 +33,6 @@
                 <div class="stat-label" data-i18n="totalSubscriptions">Всего подписок</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number" id="activeSubscriptions">-</div>
-                <div class="stat-label" data-i18n="activeSubscriptions">Активные</div>
-            </div>
-            <div class="stat-card">
                 <div class="stat-number" id="todaySubscriptions">-</div>
                 <div class="stat-label" data-i18n="todaySubscriptions">Сегодня</div>
             </div>
@@ -45,15 +41,17 @@
         <div class="controls">
             <button class="btn btn-primary" onclick="refreshData()" data-i18n="refresh">🔄 Обновить</button>
             <button class="btn" onclick="exportData()" data-i18n="exportCSV">📥 Экспорт CSV</button>
-            <input type="text" class="search-box" id="searchBox" data-i18n="searchPlaceholder" placeholder="Поиск по email..." oninput="filterSubscriptions()">
+            <button class="btn btn-danger" id="bulkDeleteBtn" onclick="bulkDelete()" style="display: none;" data-i18n="bulkDelete">🗑️ Удалить выбранные</button>
         </div>
 
         <div class="subscriptions-table">
             <div class="table-header">
+                <div class="checkbox-header">
+                    <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+                </div>
                 <div data-i18n="id">ID</div>
                 <div data-i18n="email">Email</div>
                 <div data-i18n="subscriptionDate">Дата подписки</div>
-                <div data-i18n="status">Статус</div>
                 <div data-i18n="actions">Действия</div>
             </div>
             <div id="subscriptionsList">
@@ -64,7 +62,6 @@
 
     <script>
         let allSubscriptions = [];
-        let filteredSubscriptions = [];
 
         // Check authentication on page load
         document.addEventListener('DOMContentLoaded', function() {
@@ -91,6 +88,7 @@
                     const data = await response.json();
                     document.getElementById('userDisplay').textContent = data.user.username;
                     loadSubscriptions();
+                    resetCheckboxes();
                 } else {
                     // Not authenticated, redirect to login
                     window.location.href = '/admin-login.html';
@@ -128,9 +126,9 @@
                 
                 if (data.success) {
                     allSubscriptions = data.subscriptions;
-                    filteredSubscriptions = [...allSubscriptions];
                     updateStats();
                     renderSubscriptions();
+                    resetCheckboxes();
                 } else {
                     showError('Ошибка загрузки подписок: ' + data.message);
                 }
@@ -143,7 +141,6 @@
         // Update statistics
         function updateStats() {
             const total = allSubscriptions.length;
-            const active = allSubscriptions.filter(sub => sub.status === 'active').length;
             const today = allSubscriptions.filter(sub => {
                 const today = new Date().toDateString();
                 const subDate = new Date(sub.subscribed_at).toDateString();
@@ -151,7 +148,6 @@
             }).length;
 
             document.getElementById('totalSubscriptions').textContent = total;
-            document.getElementById('activeSubscriptions').textContent = active;
             document.getElementById('todaySubscriptions').textContent = today;
         }
 
@@ -159,79 +155,36 @@
         function renderSubscriptions() {
             const container = document.getElementById('subscriptionsList');
             
-            if (filteredSubscriptions.length === 0) {
+            if (allSubscriptions.length === 0) {
                 container.innerHTML = '<div class="loading">Подписки не найдены</div>';
                 return;
             }
 
-            container.innerHTML = filteredSubscriptions.map(sub => `
+            const rowsHtml = allSubscriptions.map(sub => `
                 <div class="table-row">
+                    <div class="checkbox-cell">
+                        <input type="checkbox" class="select-checkbox" value="${sub.id}" onchange="handleCheckboxChange()">
+                    </div>
                     <div>${sub.id}</div>
                     <div>${sub.email}</div>
                     <div>${formatDate(sub.subscribed_at)}</div>
-                    <div class="status-${sub.status}">${getStatusText(sub.status)}</div>
                     <div>
-                        <button class="btn" onclick="toggleStatus(${sub.id}, '${sub.status}')">
-                            ${sub.status === 'active' ? 'Отписать' : 'Подписать'}
-                        </button>
                         <button class="btn btn-danger" onclick="deleteSubscriber(${sub.id}, '${sub.email}')" data-i18n="delete">
                             Удалить
                         </button>
                     </div>
                 </div>
             `).join('');
+            
+            container.innerHTML = rowsHtml;
+            
+            // Update bulk delete button
+            updateBulkDeleteButton();
         }
 
-        // Filter subscriptions by search
-        function filterSubscriptions() {
-            const searchTerm = document.getElementById('searchBox').value.toLowerCase();
-            
-            if (!searchTerm) {
-                filteredSubscriptions = [...allSubscriptions];
-            } else {
-                filteredSubscriptions = allSubscriptions.filter(sub => 
-                    sub.email.toLowerCase().includes(searchTerm)
-                );
-            }
-            
-            renderSubscriptions();
-        }
 
-        // Toggle subscription status
-        async function toggleStatus(id, currentStatus) {
-            const newStatus = currentStatus === 'active' ? 'unsubscribed' : 'active';
-            const email = allSubscriptions.find(sub => sub.id === id)?.email;
-            
-            if (!email) return;
 
-            try {
-                const response = await fetch('/api/unsubscribe', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    credentials: 'include',
-                    body: JSON.stringify({ email })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    // Update local data
-                    const subscription = allSubscriptions.find(sub => sub.id === id);
-                    if (subscription) {
-                        subscription.status = newStatus;
-                        updateStats();
-                        renderSubscriptions();
-                    }
-                } else {
-                    alert('Ошибка: ' + data.message);
-                }
-            } catch (error) {
-                console.error('Error toggling status:', error);
-                alert('Ошибка соединения с сервером');
-            }
-        }
+
 
         // Delete subscriber
         async function deleteSubscriber(id, email) {
@@ -253,9 +206,12 @@
                 if (data.success) {
                     // Remove from local data
                     allSubscriptions = allSubscriptions.filter(sub => sub.id !== id);
-                    filteredSubscriptions = filteredSubscriptions.filter(sub => sub.id !== id);
                     updateStats();
                     renderSubscriptions();
+                    
+                    // Reset checkboxes and bulk delete button
+                    resetCheckboxes();
+                    
                     alert(locales[currentLang].deleteSuccess);
                 } else {
                     alert('Ошибка: ' + data.message);
@@ -269,6 +225,7 @@
         // Refresh data
         function refreshData() {
             loadSubscriptions();
+            resetCheckboxes();
         }
 
         // Export data to CSV
@@ -294,18 +251,136 @@
             document.body.removeChild(link);
         }
 
+        // Bulk delete function
+        async function bulkDelete() {
+            const selectedIds = Array.from(document.querySelectorAll('.select-checkbox:checked')).map(cb => cb.value);
+            
+            if (selectedIds.length === 0) {
+                const currentLang = localStorage.getItem('language') || 'ru';
+                alert(locales[currentLang].selectSubscriptionsToDelete || 'Пожалуйста, выберите подписки для удаления.');
+                return;
+            }
+
+            const currentLang = localStorage.getItem('language') || 'ru';
+            const confirmMessage = locales[currentLang].bulkDeleteConfirm.replace('{count}', selectedIds.length);
+
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/subscriptions/bulk-delete', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ ids: selectedIds })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Convert selectedIds to numbers for proper comparison
+                    const numericIds = selectedIds.map(id => parseInt(id));
+                    
+                    allSubscriptions = allSubscriptions.filter(sub => !numericIds.includes(sub.id));
+                    
+                    updateStats();
+                    renderSubscriptions();
+                    
+                    // Reset checkboxes and bulk delete button
+                    resetCheckboxes();
+                    
+                    alert(locales[currentLang].bulkDeleteSuccess);
+                } else {
+                    const currentLang = localStorage.getItem('language') || 'ru';
+                    alert(locales[currentLang].errorToggle + data.message);
+                }
+            } catch (error) {
+                console.error('Error bulk deleting subscribers:', error);
+                alert(locales[currentLang].connectionErrorAdmin);
+            }
+        }
+
         // Helper functions
         function formatDate(dateString) {
             return new Date(dateString).toLocaleString('ru-RU');
         }
 
-        function getStatusText(status) {
-            return status === 'active' ? 'Активна' : 'Отписана';
-        }
+
 
         function showError(message) {
             document.getElementById('subscriptionsList').innerHTML = 
                 `<div class="error">${message}</div>`;
+        }
+
+        // Function to toggle select all checkboxes
+        function toggleSelectAll() {
+            const selectAllCheckbox = document.getElementById('selectAll');
+            const checkboxes = document.querySelectorAll('.select-checkbox');
+            
+            checkboxes.forEach(cb => {
+                cb.checked = selectAllCheckbox.checked;
+            });
+            updateBulkDeleteButton();
+        }
+
+        // Function to update bulk delete button visibility
+        function updateBulkDeleteButton() {
+            const checkboxes = document.querySelectorAll('.select-checkbox:checked');
+            const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+            const selectAllCheckbox = document.getElementById('selectAll');
+
+            if (checkboxes.length > 0) {
+                bulkDeleteBtn.style.display = 'block';
+                const currentLang = localStorage.getItem('language') || 'ru';
+                const bulkDeleteText = locales[currentLang].bulkDelete;
+                bulkDeleteBtn.textContent = `🗑️ ${bulkDeleteText} (${checkboxes.length})`;
+            } else {
+                bulkDeleteBtn.style.display = 'none';
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = false;
+            }
+        }
+
+        // Function to handle individual checkbox changes
+        function handleCheckboxChange() {
+            const checkboxes = document.querySelectorAll('.select-checkbox');
+            const selectAllCheckbox = document.getElementById('selectAll');
+            const checkedCount = document.querySelectorAll('.select-checkbox:checked').length;
+            
+            // Update select all checkbox state
+            if (checkedCount === 0) {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = false;
+            } else if (checkedCount === checkboxes.length) {
+                selectAllCheckbox.checked = true;
+                selectAllCheckbox.indeterminate = false;
+            } else {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = true;
+            }
+            
+            updateBulkDeleteButton();
+        }
+
+        // Function to reset all checkboxes state
+        function resetCheckboxes() {
+            const selectAllCheckbox = document.getElementById('selectAll');
+            const checkboxes = document.querySelectorAll('.select-checkbox');
+            
+            // Uncheck all checkboxes
+            checkboxes.forEach(cb => {
+                cb.checked = false;
+            });
+            
+            // Reset select all checkbox
+            selectAllCheckbox.checked = false;
+            selectAllCheckbox.indeterminate = false;
+            
+            // Update bulk delete button
+            updateBulkDeleteButton();
         }
     </script>
 </body>

@@ -148,16 +148,11 @@ app.post('/api/subscribe', (req, res) => {
         });
     }
     
-    const sql = 'INSERT INTO subscriptions (email) VALUES (?)';
+    // First check if email already exists
+    const checkSql = 'SELECT * FROM subscriptions WHERE email = ?';
     
-    db.run(sql, [email], function(err) {
+    db.get(checkSql, [email], (err, row) => {
         if (err) {
-            if (err.message.includes('UNIQUE constraint failed')) {
-                return res.status(409).json({ 
-                    success: false, 
-                    message: 'Этот email уже подписан на уведомления' 
-                });
-            }
             console.error('Database error:', err.message);
             return res.status(500).json({ 
                 success: false, 
@@ -165,11 +160,93 @@ app.post('/api/subscribe', (req, res) => {
             });
         }
         
-        res.json({ 
-            success: true, 
-            message: 'Спасибо! Мы уведомим вас, когда сайт откроется.',
-            id: this.lastID 
+        if (row) {
+            // Email already exists
+            if (row.status === 'active') {
+                return res.status(200).json({ 
+                    success: true, 
+                    message: 'Вы уже подписаны на уведомления! Вы получите уведомление сразу после публикации сайта.',
+                    alreadySubscribed: true,
+                    id: row.id 
+                });
+            } else if (row.status === 'unsubscribed') {
+                // Reactivate subscription
+                const updateSql = 'UPDATE subscriptions SET status = ? WHERE email = ?';
+                db.run(updateSql, ['active', email], function(err) {
+                    if (err) {
+                        console.error('Database error:', err.message);
+                        return res.status(500).json({ 
+                            success: false, 
+                            message: 'Ошибка сервера. Попробуйте позже.' 
+                        });
+                    }
+                    
+                    res.json({ 
+                        success: true, 
+                        message: 'Подписка восстановлена! Мы уведомим вас, когда сайт откроется.',
+                        reactivated: true,
+                        id: row.id 
+                    });
+                });
+            }
+        } else {
+            // Email doesn't exist, create new subscription
+            const insertSql = 'INSERT INTO subscriptions (email) VALUES (?)';
+            
+            db.run(insertSql, [email], function(err) {
+                if (err) {
+                    console.error('Database error:', err.message);
+                    return res.status(500).json({ 
+                        success: false, 
+                        message: 'Ошибка сервера. Попробуйте позже.' 
+                    });
+                }
+                
+                res.json({ 
+                    success: true, 
+                    message: 'Спасибо! Мы уведомим вас, когда сайт откроется.',
+                    id: this.lastID 
+                });
+            });
+        }
+    });
+});
+
+// Check if email exists in database
+app.post('/api/check-email', (req, res) => {
+    const { email } = req.body;
+    
+    if (!email || !email.includes('@')) {
+        return res.status(400).json({ 
+            success: false, 
+            message: 'Пожалуйста, введите корректный email адрес' 
         });
+    }
+    
+    const sql = 'SELECT id, status FROM subscriptions WHERE email = ?';
+    
+    db.get(sql, [email], (err, row) => {
+        if (err) {
+            console.error('Database error:', err.message);
+            return res.status(500).json({ 
+                success: false, 
+                message: 'Ошибка сервера. Попробуйте позже.' 
+            });
+        }
+        
+        if (row) {
+            res.json({ 
+                success: true, 
+                exists: true,
+                status: row.status,
+                id: row.id 
+            });
+        } else {
+            res.json({ 
+                success: true, 
+                exists: false 
+            });
+        }
     });
 });
 
@@ -262,6 +339,38 @@ app.delete('/api/subscriptions/:id', requireAuth, (req, res) => {
         res.json({ 
             success: true, 
             message: 'Подписчик успешно удален' 
+        });
+    });
+});
+
+// Bulk delete subscribers (admin only)
+app.post('/api/subscriptions/bulk-delete', requireAuth, (req, res) => {
+    const { ids } = req.body;
+    
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ 
+            success: false, 
+            message: 'Список ID подписчиков обязателен' 
+        });
+    }
+    
+    // Convert array of IDs to comma-separated string for SQL IN clause
+    const placeholders = ids.map(() => '?').join(',');
+    const sql = `DELETE FROM subscriptions WHERE id IN (${placeholders})`;
+    
+    db.run(sql, ids, function(err) {
+        if (err) {
+            console.error('Database error:', err.message);
+            return res.status(500).json({ 
+                success: false, 
+                message: 'Ошибка сервера при массовом удалении' 
+            });
+        }
+        
+        res.json({ 
+            success: true, 
+            message: `Успешно удалено ${this.changes} подписчиков`,
+            deletedCount: this.changes
         });
     });
 });

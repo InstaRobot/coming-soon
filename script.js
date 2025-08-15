@@ -57,6 +57,13 @@ document.querySelector('.email-form').addEventListener('submit', async function(
             showNotification(locales[currentLang].invalidEmail, 'error');
             return;
         }
+
+        const emailExists = await checkEmailExists(email);
+        if (emailExists) {
+            const currentLang = localStorage.getItem('language') || 'ru';
+            showNotification(locales[currentLang].emailAlreadySubscribed, 'info');
+            return;
+        }
     
             // Disable form during submission
         const currentLang = localStorage.getItem('language') || 'ru';
@@ -75,7 +82,15 @@ document.querySelector('.email-form').addEventListener('submit', async function(
             const data = await response.json();
             
             if (data.success) {
-                showNotification(data.message, 'success');
+                // Check if this is an already subscribed user
+                if (data.alreadySubscribed) {
+                    showNotification(data.message, 'info');
+                } else if (data.reactivated) {
+                    showNotification(data.message, 'success');
+                } else {
+                    showNotification(data.message, 'success');
+                }
+                
                 emailInput.value = '';
                 // Update subscription count if available
                 updateSubscriptionCount();
@@ -98,6 +113,25 @@ function isValidEmail(email) {
     return emailRegex.test(email);
 }
 
+// Check if email already exists in database
+async function checkEmailExists(email) {
+    try {
+        const response = await fetch('/api/check-email', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email })
+        });
+        
+        const data = await response.json();
+        return data.exists;
+    } catch (error) {
+        console.error('Error checking email:', error);
+        return false;
+    }
+}
+
 // Notification system
 function showNotification(message, type = 'info') {
     // Remove existing notifications
@@ -107,30 +141,6 @@ function showNotification(message, type = 'info') {
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
     notification.textContent = message;
-    
-    // Add styles
-    notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        padding: 15px 20px;
-        border-radius: 8px;
-        color: white;
-        font-weight: 500;
-        z-index: 1000;
-        animation: slideIn 0.3s ease;
-        max-width: 300px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    `;
-    
-    // Set background color based on type
-    if (type === 'success') {
-        notification.style.background = '#4CAF50';
-    } else if (type === 'error') {
-        notification.style.background = '#f44336';
-    } else {
-        notification.style.background = '#2196F3';
-    }
     
     document.body.appendChild(notification);
     
