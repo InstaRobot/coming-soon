@@ -1,5 +1,46 @@
-// Установите целевую дату здесь (год, месяц (0-11), день, час, минута)
-const targetDate = new Date(2025, 9, 1, 0, 0, 0).getTime(); // 1 января 2025 года
+// Get target date from environment or use default
+const getTargetDate = () => {
+    // Try to get from environment variable first
+    if (window.ENV_CONFIG && window.ENV_CONFIG.TARGET_DATE) {
+        return new Date(window.ENV_CONFIG.TARGET_DATE).getTime();
+    }
+    // Fallback to default date
+    return new Date(2025, 9, 1, 0, 0, 0).getTime(); // 1 октября 2025 года
+};
+
+let targetDate = getTargetDate();
+
+// Load configuration from server
+async function loadConfig() {
+    try {
+        const response = await fetch('/api/config');
+        const config = await response.json();
+        
+        // Update target date
+        targetDate = new Date(config.targetDate).getTime();
+        
+        // Update page title and description
+        if (config.siteTitle) {
+            document.title = config.siteTitle;
+        }
+        
+        if (config.siteDescription) {
+            const descriptionElement = document.querySelector('[data-i18n="mainDescription"]');
+            if (descriptionElement) {
+                descriptionElement.textContent = config.siteDescription;
+            }
+        }
+        
+        // Store config globally for other functions
+        window.ENV_CONFIG = config;
+        
+        // Update countdown with new target date
+        updateCountdown();
+    } catch (error) {
+        console.error('Error loading configuration:', error);
+        // Use default values if config loading fails
+    }
+}
 
 // Функция для обновления таймера
 function updateCountdown() {
@@ -183,7 +224,10 @@ async function updateSubscriptionCount() {
 }
 
 // Добавляем анимацию появления элементов при загрузке страницы
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
+    // Load configuration first
+    await loadConfig();
+    
     // Initialize language system
     initLanguage();
     

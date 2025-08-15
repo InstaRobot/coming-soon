@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
@@ -9,13 +11,17 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: '*',
+    credentials: true
+}));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 // Session management for admin authentication
 const sessions = new Map();
+const SESSION_DURATION = 86400000; // 24 hours in milliseconds
 
 // Admin authentication middleware
 function requireAuth(req, res, next) {
@@ -86,10 +92,13 @@ function initDatabase() {
 app.post('/api/admin/login', (req, res) => {
     const { username, password } = req.body;
     
-    // Hardcoded credentials
-    if (username === 'admin' && password === '29041979qw') {
+    // Check credentials from environment variables
+    const adminUsername = process.env.ADMIN_USERNAME || 'admin';
+    const adminPassword = process.env.ADMIN_PASSWORD || 'admin';
+    
+    if (username === adminUsername && password === adminPassword) {
         const sessionId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-        const expires = Date.now() + (24 * 60 * 60 * 1000); // 24 hours
+        const expires = Date.now() + SESSION_DURATION;
         
         sessions.set(sessionId, {
             user: { username: 'admin' },
@@ -99,7 +108,7 @@ app.post('/api/admin/login', (req, res) => {
         res.cookie('sessionId', sessionId, {
             httpOnly: true,
             secure: false, // Set to true in production with HTTPS
-            maxAge: 24 * 60 * 60 * 1000 // 24 hours
+            maxAge: SESSION_DURATION
         });
         
         res.json({ 
@@ -381,6 +390,17 @@ app.get('/api/health', (req, res) => {
         status: 'OK', 
         timestamp: new Date().toISOString(),
         database: 'connected'
+    });
+});
+
+// Configuration endpoint for frontend
+app.get('/api/config', (req, res) => {
+    res.json({
+        siteTitle: 'Скоро открытие - Coming Soon',
+        siteDescription: 'Мы работаем над чем-то удивительным. Оставайтесь с нами!',
+        targetDate: '2025-10-01T00:00:00.000Z',
+        defaultLanguage: 'ru',
+        supportedLanguages: ['ru', 'en']
     });
 });
 
