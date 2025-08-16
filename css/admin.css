@@ -94,9 +94,136 @@ body {
         }
 
         .btn-danger:hover {
-            background: linear-gradient(45deg, #c0392b, #a93226);
-            border-color: #c0392b;
-        }
+    background: linear-gradient(45deg, #c0392b, #a93226);
+    border-color: #c0392b;
+}
+
+/* Target Date Section Styles */
+.target-date-section {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 15px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.section-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.section-header h2 {
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
+    color: #fff;
+}
+
+.section-header p {
+    opacity: 0.8;
+    font-size: 1rem;
+}
+
+.date-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-group label {
+    font-weight: 600;
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+
+.form-group input,
+.form-group select {
+    padding: 0.75rem;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: #ff6b6b;
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateY(-1px);
+}
+
+.form-group input::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.form-group select option {
+    background: #2c3e50;
+    color: white;
+}
+
+.form-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.current-date-display {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+    padding: 1.5rem;
+    text-align: center;
+}
+
+.current-date-info {
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.current-date-info span:first-child {
+    opacity: 0.8;
+    margin-right: 0.5rem;
+}
+
+.date-display {
+    font-weight: 600;
+    color: #ff6b6b;
+    font-size: 1.1rem;
+}
+
+.countdown-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.countdown-preview span:first-child {
+    opacity: 0.8;
+    font-size: 0.9rem;
+}
+
+.countdown-display {
+    font-family: 'Courier New', monospace;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #00d4aa;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 212, 170, 0.3);
+}
 
 .user-info {
     display: flex;
@@ -408,5 +535,34 @@ body {
                 top: auto;
                 right: auto;
                 margin-bottom: 1rem;
+            }
+
+            /* Target Date Section Mobile Styles */
+            .target-date-section {
+                padding: 1rem;
+            }
+
+            .date-form {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .form-actions {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .form-actions .btn {
+                width: 100%;
+                max-width: 300px;
+            }
+
+            .current-date-display {
+                padding: 1rem;
+            }
+
+            .countdown-display {
+                font-size: 1rem;
+                padding: 0.75rem;
             }
         }

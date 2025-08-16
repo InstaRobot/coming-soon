@@ -38,6 +38,55 @@
             </div>
         </div>
 
+        <div class="target-date-section">
+            <div class="section-header">
+                <h2 data-i18n="targetDateSettings">🎯 Настройки даты открытия</h2>
+                <p data-i18n="targetDateDescription">Установите дату и время открытия сайта</p>
+            </div>
+            <div class="date-form">
+                <div class="form-group">
+                    <label for="targetDate" data-i18n="targetDate">Дата:</label>
+                    <input type="date" id="targetDate" required>
+                </div>
+                <div class="form-group">
+                    <label for="targetTime" data-i18n="targetTime">Время:</label>
+                    <input type="time" id="targetTime" required>
+                </div>
+                <div class="form-group">
+                    <label for="timezone" data-i18n="timezone">Часовой пояс:</label>
+                    <select id="timezone">
+                        <option value="UTC+0">UTC+0 (Лондон)</option>
+                        <option value="UTC+1">UTC+1 (Париж, Берлин)</option>
+                        <option value="UTC+2">UTC+2 (Киев, Минск)</option>
+                        <option value="UTC+3" selected>UTC+3 (Москва)</option>
+                        <option value="UTC+4">UTC+4 (Баку, Тбилиси)</option>
+                        <option value="UTC+5">UTC+5 (Екатеринбург)</option>
+                        <option value="UTC+6">UTC+6 (Омск)</option>
+                        <option value="UTC+7">UTC+7 (Новосибирск)</option>
+                        <option value="UTC+8">UTC+8 (Красноярск)</option>
+                        <option value="UTC+9">UTC+9 (Иркутск)</option>
+                        <option value="UTC+10">UTC+10 (Якутск)</option>
+                        <option value="UTC+11">UTC+11 (Владивосток)</option>
+                        <option value="UTC+12">UTC+12 (Магадан)</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button class="btn btn-primary" onclick="updateTargetDate()" data-i18n="updateTargetDate">🔄 Обновить дату</button>
+                    <button class="btn" onclick="loadCurrentTargetDate()" data-i18n="loadCurrentDate">📅 Загрузить текущую</button>
+                </div>
+            </div>
+            <div class="current-date-display">
+                <div class="current-date-info">
+                    <span data-i18n="currentTargetDate">Текущая целевая дата:</span>
+                    <span id="currentTargetDateDisplay" class="date-display">Загрузка...</span>
+                </div>
+                <div class="countdown-preview">
+                    <span data-i18n="countdownPreview">Предварительный просмотр:</span>
+                    <div id="countdownPreview" class="countdown-display">-- дней -- часов -- минут -- секунд</div>
+                </div>
+            </div>
+        </div>
+
         <div class="controls">
             <button class="btn btn-primary" onclick="refreshData()" data-i18n="refresh">🔄 Обновить</button>
             <button class="btn" onclick="exportData()" data-i18n="exportCSV">📥 Экспорт CSV</button>
@@ -89,6 +138,7 @@
                     document.getElementById('userDisplay').textContent = data.user.username;
                     loadSubscriptions();
                     resetCheckboxes();
+                    loadCurrentTargetDate();
                 } else {
                     // Not authenticated, redirect to login
                     window.location.href = '/admin-login.html';
@@ -491,6 +541,152 @@
             // Update bulk delete button
             updateBulkDeleteButton();
         }
+
+        // Target Date Management Functions
+        let currentTargetDate = null;
+
+        // Load current target date when page loads
+        async function loadCurrentTargetDate() {
+            try {
+                const response = await fetch('/api/config');
+                if (response.ok) {
+                    const config = await response.json();
+                    currentTargetDate = new Date(config.targetDate);
+                    displayCurrentTargetDate();
+                    updateCountdownPreview();
+                }
+            } catch (error) {
+                console.error('Error loading target date:', error);
+                showNotification('Ошибка загрузки целевой даты', 'error');
+            }
+        }
+
+        // Display current target date in the form
+        function displayCurrentTargetDate() {
+            if (!currentTargetDate) return;
+            
+            const dateInput = document.getElementById('targetDate');
+            const timeInput = document.getElementById('targetTime');
+            
+            // Format date for input (YYYY-MM-DD)
+            const dateStr = currentTargetDate.toISOString().split('T')[0];
+            dateInput.value = dateStr;
+            
+            // Format time for input (HH:MM)
+            const timeStr = currentTargetDate.toTimeString().slice(0, 5);
+            timeInput.value = timeStr;
+            
+            // Set timezone
+            const timezoneSelect = document.getElementById('timezone');
+            const offset = -currentTargetDate.getTimezoneOffset() / 60;
+            const timezoneValue = `UTC${offset >= 0 ? '+' : ''}${offset}`;
+            timezoneSelect.value = timezoneValue;
+        }
+
+        // Update target date
+        async function updateTargetDate() {
+            const dateInput = document.getElementById('targetDate');
+            const timeInput = document.getElementById('targetTime');
+            const timezoneSelect = document.getElementById('timezone');
+            
+            if (!dateInput.value || !timeInput.value) {
+                showNotification('Пожалуйста, заполните дату и время', 'warning');
+                return;
+            }
+            
+            try {
+                // Create date string with timezone
+                const dateTimeStr = `${dateInput.value}T${timeInput.value}:00`;
+                const timezone = timezoneSelect.value;
+                
+                // Convert to UTC
+                const localDate = new Date(dateTimeStr);
+                const utcDate = new Date(localDate.getTime() - (localDate.getTimezoneOffset() * 60000));
+                
+                const response = await fetch('/api/config/update-target-date', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        targetDate: utcDate.toISOString(),
+                        timezone: timezone
+                    })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    currentTargetDate = new Date(result.targetDate);
+                    showNotification('Целевая дата успешно обновлена!', 'success');
+                    displayCurrentTargetDate();
+                    updateCountdownPreview();
+                    updateCurrentTargetDateDisplay();
+                } else {
+                    const error = await response.json();
+                    showNotification(error.message || 'Ошибка обновления даты', 'error');
+                }
+            } catch (error) {
+                console.error('Error updating target date:', error);
+                showNotification('Ошибка обновления даты', 'error');
+            }
+        }
+
+        // Display current target date
+        function updateCurrentTargetDateDisplay() {
+            if (!currentTargetDate) {
+                document.getElementById('currentTargetDateDisplay').textContent = 'Не установлена';
+                return;
+            }
+            
+            const options = {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                timeZoneName: 'short'
+            };
+            
+            const formattedDate = currentTargetDate.toLocaleString('ru-RU', options);
+            document.getElementById('currentTargetDateDisplay').textContent = formattedDate;
+        }
+
+        // Update countdown preview
+        function updateCountdownPreview() {
+            if (!currentTargetDate) {
+                document.getElementById('countdownPreview').textContent = '-- дней -- часов -- минут -- секунд';
+                return;
+            }
+            
+            const now = new Date();
+            const timeLeft = currentTargetDate.getTime() - now.getTime();
+            
+            if (timeLeft <= 0) {
+                document.getElementById('countdownPreview').textContent = 'Время истекло!';
+                return;
+            }
+            
+            const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+            
+            document.getElementById('countdownPreview').textContent = 
+                `${days} дней ${hours} часов ${minutes} минут ${seconds} секунд`;
+        }
+
+        // Start countdown preview timer
+        function startCountdownPreview() {
+            updateCountdownPreview();
+            setInterval(updateCountdownPreview, 1000);
+        }
+
+        // Load target date when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // ... existing code ...
+            startCountdownPreview();
+        });
     </script>
 </body>
 </html>

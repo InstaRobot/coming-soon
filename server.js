@@ -23,6 +23,9 @@ app.use(cookieParser());
 const sessions = new Map();
 const SESSION_DURATION = 86400000; // 24 hours in milliseconds
 
+// Target date storage (in production, this should be stored in database)
+let targetDate = new Date('2025-10-01T00:00:00.000Z');
+
 // Admin authentication middleware
 function requireAuth(req, res, next) {
     const sessionId = req.cookies?.sessionId || req.headers['x-session-id'];
@@ -57,7 +60,7 @@ app.get('/robots.txt', (req, res) => {
 });
 
 // Database setup
-const db = new sqlite3.Database('./subscriptions.db', (err) => {
+const db = new sqlite3.Database('./app.db', (err) => {
     if (err) {
         console.error('Error opening database:', err.message);
     } else {
@@ -68,7 +71,10 @@ const db = new sqlite3.Database('./subscriptions.db', (err) => {
 
 // Initialize database table
 function initDatabase() {
-    const sql = `
+    console.log('Starting database initialization...');
+    
+    // Create subscriptions table first
+    const subscriptionsSql = `
         CREATE TABLE IF NOT EXISTS subscriptions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             email TEXT UNIQUE NOT NULL,
@@ -77,11 +83,85 @@ function initDatabase() {
         )
     `;
     
-    db.run(sql, (err) => {
+    db.run(subscriptionsSql, (err) => {
         if (err) {
-            console.error('Error creating table:', err.message);
+            console.error('Error creating subscriptions table:', err.message);
+            return;
+        }
+        console.log('Subscriptions table ready');
+        
+        // Create site_config table after subscriptions
+        const configSql = `
+            CREATE TABLE IF NOT EXISTS site_config (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                config_key TEXT UNIQUE NOT NULL,
+                config_value TEXT NOT NULL,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        `;
+        
+        db.run(configSql, (err) => {
+            if (err) {
+                console.error('Error creating site_config table:', err.message);
+                return;
+            }
+            console.log('Site config table ready');
+            
+            // Initialize default target date after both tables are created
+            initDefaultTargetDate();
+        });
+    });
+}
+
+// Initialize default target date in database
+function initDefaultTargetDate() {
+    console.log('Initializing default target date...');
+    const defaultDate = new Date('2025-10-01T00:00:00.000Z');
+    
+    db.get("SELECT config_value FROM site_config WHERE config_key = 'target_date'", (err, row) => {
+        if (err) {
+            console.error('Error checking default target date:', err);
+            return;
+        }
+        
+        if (!row) {
+            // Insert default target date
+            const insertSql = `
+                INSERT INTO site_config (config_key, config_value, updated_at) 
+                VALUES ('target_date', ?, CURRENT_TIMESTAMP)
+            `;
+            
+            db.run(insertSql, [defaultDate.toISOString()], (err) => {
+                if (err) {
+                    console.error('Error inserting default target date:', err);
+                } else {
+                    console.log('Default target date initialized in DB:', defaultDate.toISOString());
+                    // Update memory variable
+                    targetDate = defaultDate;
+                    console.log('Database initialization completed successfully!');
+                }
+            });
         } else {
-            console.log('Subscriptions table ready');
+            // Load existing target date from DB
+            targetDate = new Date(row.config_value);
+            console.log('Target date loaded from DB:', targetDate.toISOString());
+            console.log('Database initialization completed successfully!');
+        }
+    });
+}
+
+// Save target date to database
+function saveTargetDateToDB(newDate) {
+    const sql = `
+        INSERT OR REPLACE INTO site_config (config_key, config_value, updated_at) 
+        VALUES ('target_date', ?, CURRENT_TIMESTAMP)
+    `;
+    
+    db.run(sql, [newDate.toISOString()], (err) => {
+        if (err) {
+            console.error('Error saving target date to DB:', err);
+        } else {
+            console.log('Target date saved to DB:', newDate.toISOString());
         }
     });
 }
@@ -398,10 +478,55 @@ app.get('/api/config', (req, res) => {
     res.json({
         siteTitle: 'Скоро открытие - Coming Soon',
         siteDescription: 'Мы работаем над чем-то удивительным. Оставайтесь с нами!',
-        targetDate: '2025-10-01T00:00:00.000Z',
+        targetDate: targetDate.toISOString(),
         defaultLanguage: 'ru',
         supportedLanguages: ['ru', 'en']
     });
+});
+
+// Update target date endpoint (admin only)
+app.post('/api/config/update-target-date', requireAuth, (req, res) => {
+    try {
+        const { targetDate: newTargetDate, timezone } = req.body;
+        
+        if (!newTargetDate) {
+            return res.status(400).json({
+                success: false,
+                message: 'Target date is required'
+            });
+        }
+        
+        // Parse and validate the date
+        const parsedDate = new Date(newTargetDate);
+        if (isNaN(parsedDate.getTime())) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid date format'
+            });
+        }
+        
+        // Update the target date in memory
+        targetDate = parsedDate;
+        
+        // Save to database
+        saveTargetDateToDB(parsedDate);
+        
+        console.log(`Target date updated to: ${targetDate.toISOString()} (${timezone || 'UTC'})`);
+        
+        res.json({
+            success: true,
+            message: 'Target date updated successfully',
+            targetDate: targetDate.toISOString(),
+            timezone: timezone || 'UTC'
+        });
+        
+    } catch (error) {
+        console.error('Error updating target date:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error'
+        });
+    }
 });
 
 // Serve the main page
@@ -440,7 +565,7 @@ app.use((req, res) => {
 app.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
     console.log(`📧 Email subscription service ready`);
-    console.log(`💾 SQLite database: subscriptions.db`);
+    console.log(`💾 SQLite database: app.db`);
 });
 
 // Graceful shutdown

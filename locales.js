@@ -70,7 +70,18 @@ const locales = {
         // Language switcher
         language: 'Язык',
         switchToEnglish: 'Switch to English',
-        switchToRussian: 'Переключиться на русский'
+        switchToRussian: 'Переключиться на русский',
+        
+        // Target Date Settings
+        targetDateSettings: 'Настройки даты открытия',
+        targetDateDescription: 'Установите дату и время открытия сайта',
+        targetDate: 'Дата:',
+        targetTime: 'Время:',
+        timezone: 'Часовой пояс:',
+        updateTargetDate: 'Обновить дату',
+        loadCurrentDate: 'Загрузить текущую',
+        currentTargetDate: 'Текущая целевая дата:',
+        countdownPreview: 'Предварительный просмотр:'
     },
     
     en: {
@@ -144,7 +155,18 @@ const locales = {
         // Language switcher
         language: 'Language',
         switchToEnglish: 'Switch to English',
-        switchToRussian: 'Переключиться на русский'
+        switchToRussian: 'Переключиться на русский',
+        
+        // Target Date Settings
+        targetDateSettings: 'Target Date Settings',
+        targetDateDescription: 'Set the date and time when the site will launch',
+        targetDate: 'Date:',
+        targetTime: 'Time:',
+        timezone: 'Timezone:',
+        updateTargetDate: 'Update Date',
+        loadCurrentDate: 'Load Current',
+        currentTargetDate: 'Current Target Date:',
+        countdownPreview: 'Countdown Preview:'
     }
 };
 
