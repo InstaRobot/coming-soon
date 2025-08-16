@@ -564,7 +564,7 @@ app.use((req, res) => {
 // Start server
 app.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
-    console.log(`📧 Email subscription service ready`);
+    console.log(`Service ready`);
     console.log(`💾 SQLite database: app.db`);
 });
 
