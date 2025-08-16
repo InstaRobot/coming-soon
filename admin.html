@@ -140,12 +140,12 @@
                     resetCheckboxes();
                     loadCurrentTargetDate();
                 } else {
-                    // Not authenticated, redirect to login
-                    window.location.href = '/admin-login.html';
+                    // Not authenticated, redirect to main page
+                    window.location.href = '/';
                 }
             } catch (error) {
                 console.error('Auth check error:', error);
-                window.location.href = '/admin-login.html';
+                window.location.href = '/';
             }
         }
 
@@ -157,12 +157,12 @@
                     credentials: 'include'
                 });
                 
-                // Redirect to login page
-                window.location.href = '/admin-login.html';
+                // Redirect to main page
+                window.location.href = '/';
             } catch (error) {
                 console.error('Logout error:', error);
                 // Still redirect even if logout fails
-                window.location.href = '/admin-login.html';
+                window.location.href = '/';
             }
         }
 
