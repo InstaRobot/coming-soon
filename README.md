@@ -141,6 +141,38 @@ docker rm coming-soon-app
 
 - `Dockerfile` - универсальный образ для сборки
 
+### Docker Compose (опционально)
+
+Создайте `docker-compose.yml` для удобного запуска:
+
+```yaml
+version: '3.8'
+
+services:
+  coming-soon:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    volumes:
+      - ./app.db:/app/app.db
+    restart: unless-stopped
+```
+
+Запуск:
+```bash
+# Сборка и запуск
+docker-compose up -d --build
+
+# Остановка
+docker-compose down
+
+# Просмотр логов
+docker-compose logs -f
+```
+
 ## 🔧 API
 
 ### Публичные
