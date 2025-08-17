@@ -25,11 +25,17 @@ npm run dev
 ### Docker
 
 ```bash
-# Запуск с помощью Makefile
-make up
+# Сборка образа
+docker build -t coming-soon .
 
-# Или напрямую
-docker-compose up -d
+# Запуск контейнера
+docker run -d -p 3000:3000 --name coming-soon-app coming-soon
+
+# Остановка контейнера
+docker stop coming-soon-app
+
+# Удаление контейнера
+docker rm coming-soon-app
 ```
 
 ## 📋 Требования
