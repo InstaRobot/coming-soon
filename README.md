@@ -173,16 +173,7 @@ docker-compose down
 docker-compose logs -f
 ```
 
-## 🔧 API
 
-### Публичные
-- `POST /api/subscribe` - подписка на email
-- `GET /api/config` - конфигурация сайта
-
-### Защищенные (требуют авторизации)
-- `GET /api/subscriptions` - список подписок
-- `POST /api/subscriptions/bulk-delete` - множественное удаление
-- `POST /api/config/update-target-date` - обновление даты
 
 ## 🌍 Локализация
 
