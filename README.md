@@ -118,19 +118,22 @@ npm start
 ### Команды
 
 ```bash
-make up        # Запуск production
-make up-dev    # Запуск development
-make down      # Остановка
-make logs      # Логи
-make help      # Справка
+# Сборка образа
+docker build -t coming-soon .
+
+# Запуск контейнера
+docker run -d -p 3000:3000 --name coming-soon-app coming-soon
+
+# Остановка контейнера
+docker stop coming-soon-app
+
+# Удаление контейнера
+docker rm coming-soon-app
 ```
 
 ### Файлы
 
-- `Dockerfile` - production образ
-- `Dockerfile.dev` - development образ
-- `docker-compose.yml` - production окружение
-- `docker-compose.dev.yml` - development окружение
+- `Dockerfile` - универсальный образ для сборки
 
 ## 🔧 API
 

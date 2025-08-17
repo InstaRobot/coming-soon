@@ -1,28 +1,36 @@
-# Используем официальный образ Node.js
-FROM node:18-alpine AS builder
+# Универсальный Dockerfile для Coming Soon проекта
+FROM node:18-alpine
 
-# Устанавливаем рабочую директорию
+# Установка рабочей директории
 WORKDIR /app
 
-# Копируем package.json и package-lock.json
+# Копирование package.json и package-lock.json
 COPY package*.json ./
 
-# Устанавливаем зависимости
-RUN npm ci --only=production
+# Установка зависимостей
+RUN npm ci --only=production && npm cache clean --force
 
-# Копируем исходный код
+# Копирование исходного кода
 COPY . .
 
-# Создаем пользователя для безопасности
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nodejs -u 1001
+# Создание непривилегированного пользователя
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
 
-# Меняем владельца файлов
+# Изменение владельца файлов
 RUN chown -R nodejs:nodejs /app
 USER nodejs
 
-# Открываем порт
+# Открытие порта
 EXPOSE 3000
 
-# Запускаем приложение
-CMD ["node", "server.js"]
+# Переменные окружения
+ENV NODE_ENV=production
+ENV PORT=3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3000/api/config', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
+
+# Команда запуска
+CMD ["npm", "start"]

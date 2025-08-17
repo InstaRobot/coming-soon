@@ -11,11 +11,7 @@ Disallow: /app.db
 Disallow: /node_modules/
 Disallow: /.git/
 Disallow: /.env
-Disallow: /Dockerfile*
-Disallow: /docker-compose*.yml
-Disallow: /Makefile
-Disallow: /docker-build.sh
-Disallow: /DOCKER.md
+Disallow: /Dockerfile
 
 # Разрешаем индексацию главной страницы
 Allow: /
