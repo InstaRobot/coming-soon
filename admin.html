@@ -577,6 +577,7 @@
                     const config = await response.json();
                     currentProjectName = config.projectName || 'LOGO';
                     displayCurrentProjectName();
+                    updateCurrentProjectNameDisplay();
                 }
             } catch (error) {
                 console.error('Error loading project name:', error);
@@ -782,6 +783,8 @@
         // Additional initialization for target date section
         function initTargetDateSection() {
             startCountdownPreview();
+            // Load project name regardless of auth status (public data)
+            loadCurrentProjectName();
         }
     </script>
 </body>
