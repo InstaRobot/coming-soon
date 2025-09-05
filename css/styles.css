@@ -43,7 +43,13 @@ body {
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            -webkit-text-stroke: 1px rgba(255, 255, 255, 0.1);
+            text-stroke: 1px rgba(255, 255, 255, 0.1);
             text-shadow:
+                -1px -1px 0 rgba(255, 255, 255, 0.15),
+                1px -1px 0 rgba(255, 255, 255, 0.15),
+                -1px 1px 0 rgba(255, 255, 255, 0.15),
+                1px 1px 0 rgba(255, 255, 255, 0.15),
                 0 0 40px rgba(255, 255, 255, 0.5),
                 0 0 80px rgba(255, 255, 255, 0.3),
                 0 0 120px rgba(147, 197, 253, 0.2);
@@ -55,7 +61,13 @@ body {
 
         .logo h1:hover {
             transform: scale(1.05);
+            -webkit-text-stroke: 1px rgba(255, 255, 255, 0.2);
+            text-stroke: 1px rgba(255, 255, 255, 0.2);
             text-shadow:
+                -1px -1px 0 rgba(255, 255, 255, 0.25),
+                1px -1px 0 rgba(255, 255, 255, 0.25),
+                -1px 1px 0 rgba(255, 255, 255, 0.25),
+                1px 1px 0 rgba(255, 255, 255, 0.25),
                 0 0 50px rgba(255, 255, 255, 0.7),
                 0 0 100px rgba(255, 255, 255, 0.5),
                 0 0 150px rgba(147, 197, 253, 0.3);
@@ -118,6 +130,8 @@ body {
                 font-size: 3rem;
                 letter-spacing: 1px;
                 margin-bottom: 1.5rem;
+                -webkit-text-stroke: 0.8px rgba(255, 255, 255, 0.1);
+                text-stroke: 0.8px rgba(255, 255, 255, 0.1);
             }
         }
 
@@ -126,6 +140,8 @@ body {
                 font-size: 2.5rem;
                 letter-spacing: 0.5px;
                 margin-bottom: 1rem;
+                -webkit-text-stroke: 0.6px rgba(255, 255, 255, 0.1);
+                text-stroke: 0.6px rgba(255, 255, 255, 0.1);
             }
         }
 
@@ -133,6 +149,8 @@ body {
             .logo h1 {
                 font-size: 2rem;
                 letter-spacing: 0px;
+                -webkit-text-stroke: 0.5px rgba(255, 255, 255, 0.1);
+                text-stroke: 0.5px rgba(255, 255, 255, 0.1);
             }
         }
 
