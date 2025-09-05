@@ -1,0 +1,13 @@
+
+services:
+  coming-soon-app:
+    build: .
+    container_name: coming-soon-app
+    ports:
+      - "${PORT:-3000}:3000"
+    env_file:
+      - .env
+    volumes:
+      - ./app.db:/app/app.db
+      - ./images:/app/images
+    restart: unless-stopped
