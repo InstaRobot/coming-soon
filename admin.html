@@ -146,6 +146,7 @@
             }
             
             checkAuth();
+            initTargetDateSection();
         });
 
         // Check if user is authenticated
@@ -778,11 +779,10 @@
             setInterval(updateCountdownPreview, 1000);
         }
 
-        // Load target date when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            // ... existing code ...
+        // Additional initialization for target date section
+        function initTargetDateSection() {
             startCountdownPreview();
-        });
+        }
     </script>
 </body>
 </html>
