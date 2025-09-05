@@ -152,11 +152,14 @@
         // Check if user is authenticated
         async function checkAuth() {
             try {
+                console.log('Checking authentication...');
                 const response = await fetch('/api/admin/check-auth', {
                     credentials: 'include'
                 });
-                
+                console.log('Auth response status:', response.status);
+
                 if (response.ok) {
+                    console.log('Authentication successful');
                     const data = await response.json();
                     document.getElementById('userDisplay').textContent = data.user.username;
                     loadSubscriptions();
@@ -193,10 +196,13 @@
         // Load subscriptions from API
         async function loadSubscriptions() {
             try {
+                console.log('Loading subscriptions...');
                 const response = await fetch('/api/subscriptions', {
                     credentials: 'include'
                 });
+                console.log('Subscriptions response status:', response.status);
                 const data = await response.json();
+                console.log('Subscriptions data:', data);
                 
                 if (data.success) {
                     allSubscriptions = data.subscriptions;
