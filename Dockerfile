@@ -26,7 +26,6 @@ EXPOSE 3000
 
 # Переменные окружения
 ENV NODE_ENV=production
-ENV PORT=3000
 
 # Команда запуска
 CMD ["npm", "start"]
