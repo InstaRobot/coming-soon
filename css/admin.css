@@ -234,6 +234,13 @@ body {
     margin-right: 0.5rem;
 }
 
+.current-date-value {
+    font-weight: 600;
+    color: #4ade80;
+    font-size: 1.1rem;
+    margin-top: 0.5rem;
+}
+
 .date-display {
     font-weight: 600;
     color: #ff6b6b;
