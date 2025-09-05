@@ -13,16 +13,15 @@ RUN npm ci --only=production --no-audit --no-fund && npm cache clean --force
 # Копирование исходного кода
 COPY . .
 
-# Создание файла базы данных если его нет
-RUN touch app.db || true
+# Создание директории для данных
+RUN mkdir -p /app/data
 
 # Создание непривилегированного пользователя  
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
 
-# Изменение владельца файлов (включая базу данных)
-RUN chown -R nodejs:nodejs /app && \
-    chmod 666 app.db || true
+# Изменение владельца файлов (включая директорию данных)
+RUN chown -R nodejs:nodejs /app
 
 USER nodejs
 

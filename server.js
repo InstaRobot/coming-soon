@@ -102,8 +102,8 @@ app.get('/robots.txt', (req, res) => {
     res.sendFile(path.join(__dirname, 'robots.txt'));
 });
 
-// Database setup with retry logic
-const dbPath = process.env.DB_PATH || './app.db';
+// Database setup with retry logic  
+const dbPath = process.env.DB_PATH || './data/app.db';
 const fs = require('fs');
 
 console.log('Attempting to connect to database at:', dbPath);
