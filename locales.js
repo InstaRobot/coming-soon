@@ -72,6 +72,14 @@ const locales = {
         switchToEnglish: 'Switch to English',
         switchToRussian: 'Переключиться на русский',
         
+        // Logo Settings
+        logoSettings: 'Настройки названия проекта',
+        logoDescription: 'Установите название проекта для отображения на главной странице',
+        projectName: 'Название проекта:',
+        updateProjectName: 'Обновить название',
+        loadCurrentName: 'Загрузить текущее',
+        currentProjectName: 'Текущее название:',
+        
         // Target Date Settings
         targetDateSettings: 'Настройки даты открытия',
         targetDateDescription: 'Установите дату и время открытия сайта',
@@ -156,6 +164,14 @@ const locales = {
         language: 'Language',
         switchToEnglish: 'Switch to English',
         switchToRussian: 'Переключиться на русский',
+        
+        // Logo Settings
+        logoSettings: 'Project Name Settings',
+        logoDescription: 'Set the project name to display on the main page',
+        projectName: 'Project Name:',
+        updateProjectName: 'Update Name',
+        loadCurrentName: 'Load Current',
+        currentProjectName: 'Current Name:',
         
         // Target Date Settings
         targetDateSettings: 'Target Date Settings',

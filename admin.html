@@ -38,6 +38,27 @@
             </div>
         </div>
 
+        <div class="logo-settings-section">
+            <div class="section-header">
+                <h2 data-i18n="logoSettings">🏷️ Настройки названия проекта</h2>
+                <p data-i18n="logoDescription">Установите название проекта для отображения на главной странице</p>
+            </div>
+            <div class="logo-form">
+                <div class="form-group">
+                    <label for="projectName" data-i18n="projectName">Название проекта:</label>
+                    <input type="text" id="projectName" placeholder="Введите название проекта" maxlength="50">
+                </div>
+                <div class="form-actions">
+                    <button class="btn btn-primary" onclick="updateProjectName()" data-i18n="updateProjectName">🔄 Обновить название</button>
+                    <button class="btn" onclick="loadCurrentProjectName()" data-i18n="loadCurrentName">📝 Загрузить текущее</button>
+                </div>
+            </div>
+            <div class="current-name-display">
+                <span data-i18n="currentProjectName">Текущее название:</span>
+                <div id="currentProjectNameDisplay" class="name-display">LOGO</div>
+            </div>
+        </div>
+
         <div class="target-date-section">
             <div class="section-header">
                 <h2 data-i18n="targetDateSettings">🎯 Настройки даты открытия</h2>
@@ -136,6 +157,7 @@
                     loadSubscriptions();
                     resetCheckboxes();
                     loadCurrentTargetDate();
+                    loadCurrentProjectName();
                 } else {
                     // Not authenticated, redirect to main page
                     window.location.href = '/';
@@ -537,6 +559,78 @@
             
             // Update bulk delete button
             updateBulkDeleteButton();
+        }
+
+        // Project Name Management Functions
+        let currentProjectName = 'LOGO';
+
+        // Load current project name when page loads
+        async function loadCurrentProjectName() {
+            try {
+                const response = await fetch('/api/config');
+                if (response.ok) {
+                    const config = await response.json();
+                    currentProjectName = config.projectName || 'LOGO';
+                    displayCurrentProjectName();
+                }
+            } catch (error) {
+                console.error('Error loading project name:', error);
+                showNotification('Ошибка загрузки названия проекта', 'error');
+            }
+        }
+
+        // Display current project name in the form
+        function displayCurrentProjectName() {
+            const nameInput = document.getElementById('projectName');
+            nameInput.value = currentProjectName;
+            updateCurrentProjectNameDisplay();
+        }
+
+        // Update project name
+        async function updateProjectName() {
+            const nameInput = document.getElementById('projectName');
+            const newName = nameInput.value.trim();
+            
+            if (!newName) {
+                showNotification('Пожалуйста, введите название проекта', 'warning');
+                return;
+            }
+            
+            if (newName.length > 50) {
+                showNotification('Название проекта не должно превышать 50 символов', 'warning');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/config/update-project-name', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        projectName: newName
+                    })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    currentProjectName = result.projectName;
+                    showNotification('Название проекта успешно обновлено!', 'success');
+                    displayCurrentProjectName();
+                } else {
+                    const error = await response.json();
+                    showNotification(error.message || 'Ошибка обновления названия проекта', 'error');
+                }
+            } catch (error) {
+                console.error('Error updating project name:', error);
+                showNotification('Ошибка обновления названия проекта', 'error');
+            }
+        }
+
+        // Display current project name
+        function updateCurrentProjectNameDisplay() {
+            document.getElementById('currentProjectNameDisplay').textContent = currentProjectName;
         }
 
         // Target Date Management Functions

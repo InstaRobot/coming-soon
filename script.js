@@ -31,6 +31,14 @@ async function loadConfig() {
             }
         }
         
+        // Update project name (logo)
+        if (config.projectName) {
+            const logoElement = document.getElementById('project-logo');
+            if (logoElement) {
+                logoElement.textContent = config.projectName;
+            }
+        }
+        
         // Store config globally for other functions
         window.ENV_CONFIG = config;
         

@@ -138,13 +138,47 @@ function initDefaultTargetDate() {
                     console.log('Default target date initialized in DB:', defaultDate.toISOString());
                     // Update memory variable
                     targetDate = defaultDate;
-                    console.log('Database initialization completed successfully!');
+                    // Initialize default project name after target date
+                    initDefaultProjectName();
                 }
             });
         } else {
             // Load existing target date from DB
             targetDate = new Date(row.config_value);
             console.log('Target date loaded from DB:', targetDate.toISOString());
+            // Initialize default project name after target date
+            initDefaultProjectName();
+        }
+    });
+}
+
+// Initialize default project name in database
+function initDefaultProjectName() {
+    console.log('Initializing default project name...');
+    
+    db.get("SELECT config_value FROM site_config WHERE config_key = 'project_name'", (err, row) => {
+        if (err) {
+            console.error('Error checking default project name:', err);
+            return;
+        }
+        
+        if (!row) {
+            // Insert default project name
+            const insertSql = `
+                INSERT INTO site_config (config_key, config_value, updated_at) 
+                VALUES ('project_name', ?, CURRENT_TIMESTAMP)
+            `;
+            
+            db.run(insertSql, ['LOGO'], (err) => {
+                if (err) {
+                    console.error('Error inserting default project name:', err);
+                } else {
+                    console.log('Default project name initialized in DB: LOGO');
+                    console.log('Database initialization completed successfully!');
+                }
+            });
+        } else {
+            console.log('Project name loaded from DB:', row.config_value);
             console.log('Database initialization completed successfully!');
         }
     });
@@ -162,6 +196,37 @@ function saveTargetDateToDB(newDate) {
             console.error('Error saving target date to DB:', err);
         } else {
             console.log('Target date saved to DB:', newDate.toISOString());
+        }
+    });
+}
+
+// Save project name to database
+function saveProjectNameToDB(projectName) {
+    const sql = `
+        INSERT OR REPLACE INTO site_config (config_key, config_value, updated_at) 
+        VALUES ('project_name', ?, CURRENT_TIMESTAMP)
+    `;
+    
+    db.run(sql, [projectName], (err) => {
+        if (err) {
+            console.error('Error saving project name to DB:', err);
+        } else {
+            console.log('Project name saved to DB:', projectName);
+        }
+    });
+}
+
+// Get project name from database
+function getProjectNameFromDB(callback) {
+    const sql = 'SELECT config_value FROM site_config WHERE config_key = ?';
+    
+    db.get(sql, ['project_name'], (err, row) => {
+        if (err) {
+            console.error('Error getting project name from DB:', err);
+            callback(err, null);
+        } else {
+            const projectName = row ? row.config_value : 'LOGO';
+            callback(null, projectName);
         }
     });
 }
@@ -475,12 +540,20 @@ app.get('/api/health', (req, res) => {
 
 // Configuration endpoint for frontend
 app.get('/api/config', (req, res) => {
-    res.json({
-        siteTitle: 'Скоро открытие - Coming Soon',
-        siteDescription: 'Мы работаем над чем-то удивительным. Оставайтесь с нами!',
-        targetDate: targetDate.toISOString(),
-        defaultLanguage: 'ru',
-        supportedLanguages: ['ru', 'en']
+    getProjectNameFromDB((err, projectName) => {
+        if (err) {
+            console.error('Error getting project name:', err);
+            projectName = 'LOGO';
+        }
+        
+        res.json({
+            siteTitle: 'Скоро открытие - Coming Soon',
+            siteDescription: 'Мы работаем над чем-то удивительным. Оставайтесь с нами!',
+            targetDate: targetDate.toISOString(),
+            projectName: projectName,
+            defaultLanguage: 'ru',
+            supportedLanguages: ['ru', 'en']
+        });
     });
 });
 
@@ -522,6 +595,54 @@ app.post('/api/config/update-target-date', requireAuth, (req, res) => {
         
     } catch (error) {
         console.error('Error updating target date:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error'
+        });
+    }
+});
+
+// Update project name endpoint (admin only)
+app.post('/api/config/update-project-name', requireAuth, (req, res) => {
+    try {
+        const { projectName } = req.body;
+        
+        if (!projectName || typeof projectName !== 'string') {
+            return res.status(400).json({
+                success: false,
+                message: 'Project name is required'
+            });
+        }
+        
+        const trimmedName = projectName.trim();
+        
+        if (!trimmedName) {
+            return res.status(400).json({
+                success: false,
+                message: 'Project name cannot be empty'
+            });
+        }
+        
+        if (trimmedName.length > 50) {
+            return res.status(400).json({
+                success: false,
+                message: 'Project name cannot exceed 50 characters'
+            });
+        }
+        
+        // Save to database
+        saveProjectNameToDB(trimmedName);
+        
+        console.log(`Project name updated to: ${trimmedName}`);
+        
+        res.json({
+            success: true,
+            message: 'Project name updated successfully',
+            projectName: trimmedName
+        });
+        
+    } catch (error) {
+        console.error('Error updating project name:', error);
         res.status(500).json({
             success: false,
             message: 'Internal server error'

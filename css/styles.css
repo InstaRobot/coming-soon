@@ -36,14 +36,104 @@ body {
 }
 
         .logo h1 {
-            font-size: 2.5rem;
-            font-weight: 700;
+            font-size: 4rem;
+            font-weight: 800;
             margin-bottom: 2rem;
-            background: linear-gradient(45deg, #fff, #f0f0f0);
+            background: linear-gradient(135deg, #fff 0%, #e0e7ff 25%, #c7d2fe 50%, #ddd6fe 75%, #f3e8ff 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            text-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
+            text-shadow:
+                0 0 40px rgba(255, 255, 255, 0.5),
+                0 0 80px rgba(255, 255, 255, 0.3),
+                0 0 120px rgba(147, 197, 253, 0.2);
+            animation: logoGlow 3s ease-in-out infinite alternate, logoFadeIn 1.5s ease-out;
+            transition: all 0.3s ease;
+            letter-spacing: 2px;
+            position: relative;
+        }
+
+        .logo h1:hover {
+            transform: scale(1.05);
+            text-shadow:
+                0 0 50px rgba(255, 255, 255, 0.7),
+                0 0 100px rgba(255, 255, 255, 0.5),
+                0 0 150px rgba(147, 197, 253, 0.3);
+            animation: logoPulse 0.6s ease-in-out;
+        }
+
+        .logo h1::before {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            right: -10px;
+            bottom: -10px;
+            background: linear-gradient(45deg, rgba(255,255,255,0.1), rgba(147,197,253,0.1));
+            border-radius: 20px;
+            z-index: -1;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .logo h1:hover::before {
+            opacity: 1;
+        }
+
+        @keyframes logoGlow {
+            0% {
+                filter: brightness(1) drop-shadow(0 0 20px rgba(255, 255, 255, 0.3));
+            }
+            100% {
+                filter: brightness(1.1) drop-shadow(0 0 30px rgba(255, 255, 255, 0.6));
+            }
+        }
+
+        @keyframes logoPulse {
+            0% {
+                transform: scale(1.05);
+            }
+            50% {
+                transform: scale(1.08);
+            }
+            100% {
+                transform: scale(1.05);
+            }
+        }
+
+        @keyframes logoFadeIn {
+            0% {
+                opacity: 0;
+                transform: translateY(-30px) scale(0.9);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        /* Responsive design for logo */
+        @media (max-width: 768px) {
+            .logo h1 {
+                font-size: 3rem;
+                letter-spacing: 1px;
+                margin-bottom: 1.5rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .logo h1 {
+                font-size: 2.5rem;
+                letter-spacing: 0.5px;
+                margin-bottom: 1rem;
+            }
+        }
+
+        @media (max-width: 320px) {
+            .logo h1 {
+                font-size: 2rem;
+                letter-spacing: 0px;
+            }
         }
 
         .language-switcher-container {
