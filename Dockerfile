@@ -21,7 +21,7 @@ RUN addgroup -g 1001 -S nodejs && \
 RUN chown -R nodejs:nodejs /app
 USER nodejs
 
-# Открытие порта
+# Открытие порта (порт приложения настраивается через переменную PORT)
 EXPOSE 3000
 
 # Переменные окружения
