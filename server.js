@@ -782,9 +782,47 @@ app.listen(PORT, () => {
     console.log(`💾 SQLite database: app.db`);
 });
 
+// Prevent crash loops - handle unhandled errors
+process.on('uncaughtException', (error) => {
+    console.error('🚨 UNCAUGHT EXCEPTION! Shutting down...');
+    console.error('Error name:', error.name);
+    console.error('Error message:', error.message);
+    console.error('Stack trace:', error.stack);
+    
+    // Close database connection gracefully
+    db.close(() => {
+        console.log('Database connection closed due to uncaught exception');
+        process.exit(1);
+    });
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('🚨 UNHANDLED REJECTION! Shutting down...');
+    console.error('Reason:', reason);
+    console.error('Promise:', promise);
+    
+    // Close database connection gracefully
+    db.close(() => {
+        console.log('Database connection closed due to unhandled rejection');
+        process.exit(1);
+    });
+});
+
 // Graceful shutdown
 process.on('SIGINT', () => {
-    console.log('\n🛑 Shutting down server...');
+    console.log('\n🛑 Shutting down server gracefully...');
+    db.close((err) => {
+        if (err) {
+            console.error('Error closing database:', err.message);
+        } else {
+            console.log('Database connection closed');
+        }
+        process.exit(0);
+    });
+});
+
+process.on('SIGTERM', () => {
+    console.log('\n🛑 Received SIGTERM, shutting down gracefully...');
     db.close((err) => {
         if (err) {
             console.error('Error closing database:', err.message);
