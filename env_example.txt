@@ -2,9 +2,22 @@
 PORT=3000
 NODE_ENV=production
 
-# Admin panel credentials (optional)
-# ADMIN_USERNAME=admin
-# ADMIN_PASSWORD=your_secure_password
+# Database configuration
+# DB_PATH=./app.db
 
-# Production CORS settings (optional)
-# ALLOWED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
+# Admin panel credentials (REQUIRED for production)
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=your_secure_password_here
+
+# Production CORS settings (REQUIRED for production)
+# Set to your actual domain(s), comma-separated
+ALLOWED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
+
+# Cookie settings for HTTPS (optional)
+# COOKIE_DOMAIN=yourdomain.com
+
+# Production deployment notes:
+# 1. Change ADMIN_PASSWORD to a strong password
+# 2. Set ALLOWED_ORIGINS to your actual domain(s)  
+# 3. Ensure NODE_ENV=production for HTTPS cookie security
+# 4. Set COOKIE_DOMAIN if using subdomains

@@ -24,14 +24,21 @@ const corsOptions = {
 
         // In production, check allowed origins
         const allowedOrigins = process.env.ALLOWED_ORIGINS ?
-            process.env.ALLOWED_ORIGINS.split(',') :
-            ['https://yourdomain.com', 'https://www.yourdomain.com'];
+            process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim()) :
+            [];
 
-        if (allowedOrigins.includes(origin)) {
-            return callback(null, true);
+        // If ALLOWED_ORIGINS is set, use it strictly
+        if (allowedOrigins.length > 0) {
+            if (allowedOrigins.includes(origin)) {
+                return callback(null, true);
+            } else {
+                console.log(`CORS blocked origin: ${origin}. Allowed: ${allowedOrigins.join(', ')}`);
+                return callback(new Error('Not allowed by CORS'));
+            }
         }
 
-        // For now, allow all for simplicity (remove this in production)
+        // If no ALLOWED_ORIGINS set, allow all (for ease of deployment)
+        console.log(`CORS allowing origin: ${origin} (no restrictions set)`);
         return callback(null, true);
     },
     credentials: true,
@@ -58,11 +65,13 @@ let targetDate = new Date('2025-10-01T00:00:00.000Z');
 // Admin authentication middleware
 function requireAuth(req, res, next) {
     const sessionId = req.cookies?.sessionId || req.headers['x-session-id'];
-    console.log('Auth check - Session ID:', sessionId ? 'present' : 'missing');
+    console.log('Auth check - Session ID:', sessionId ? sessionId.substring(0, 8) + '...' : 'missing');
     console.log('Auth check - Sessions count:', sessions.size);
+    console.log('Auth check - Request origin:', req.headers.origin || 'no origin');
+    console.log('Auth check - Request URL:', req.url);
 
     if (!sessionId || !sessions.has(sessionId)) {
-        console.log('Auth failed - no valid session');
+        console.log('Auth failed - no valid session. Available sessions:', Array.from(sessions.keys()).map(id => id.substring(0, 8) + '...'));
         return res.status(401).json({
             success: false,
             message: 'Unauthorized'
@@ -71,6 +80,7 @@ function requireAuth(req, res, next) {
     
     const session = sessions.get(sessionId);
     if (Date.now() > session.expires) {
+        console.log('Auth failed - session expired at:', new Date(session.expires).toISOString());
         sessions.delete(sessionId);
         return res.status(401).json({ 
             success: false, 
@@ -78,6 +88,7 @@ function requireAuth(req, res, next) {
         });
     }
     
+    console.log('Auth successful for user:', session.user.username);
     req.adminUser = session.user;
     next();
 }
@@ -92,11 +103,16 @@ app.get('/robots.txt', (req, res) => {
 });
 
 // Database setup
-const db = new sqlite3.Database('./app.db', (err) => {
+const dbPath = process.env.DB_PATH || './app.db';
+console.log('Attempting to connect to database at:', dbPath);
+const db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
         console.error('Error opening database:', err.message);
+        console.error('Database path:', dbPath);
+        console.error('Current working directory:', process.cwd());
+        process.exit(1); // Exit if database cannot be opened
     } else {
-        console.log('Connected to SQLite database');
+        console.log('Connected to SQLite database at:', dbPath);
         initDatabase();
     }
 });
@@ -268,10 +284,15 @@ function getProjectNameFromDB(callback) {
 // Admin authentication
 app.post('/api/admin/login', (req, res) => {
     const { username, password } = req.body;
+    console.log('Login attempt for username:', username);
+    console.log('Request origin:', req.headers.origin || 'no origin');
+    console.log('Request user-agent:', req.headers['user-agent'] || 'unknown');
     
     // Check credentials from environment variables
     const adminUsername = process.env.ADMIN_USERNAME || 'admin';
     const adminPassword = process.env.ADMIN_PASSWORD || 'admin';
+    console.log('Expected username:', adminUsername);
+    console.log('Using default credentials:', !process.env.ADMIN_USERNAME || !process.env.ADMIN_PASSWORD);
     
     if (username === adminUsername && password === adminPassword) {
         const sessionId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
@@ -282,12 +303,21 @@ app.post('/api/admin/login', (req, res) => {
             expires: expires
         });
         
-        res.cookie('sessionId', sessionId, {
+        // Cookie configuration for production/development
+        const cookieOptions = {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production', // HTTPS only in production
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax', // Fixed: use 'strict' instead of 'none'
             maxAge: SESSION_DURATION
-        });
+        };
+
+        // Add domain if specified in production
+        if (process.env.NODE_ENV === 'production' && process.env.COOKIE_DOMAIN) {
+            cookieOptions.domain = process.env.COOKIE_DOMAIN;
+        }
+
+        console.log('Setting cookie with options:', JSON.stringify(cookieOptions));
+        res.cookie('sessionId', sessionId, cookieOptions);
         
         res.json({ 
             success: true, 
@@ -567,7 +597,37 @@ app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'OK', 
         timestamp: new Date().toISOString(),
-        database: 'connected'
+        database: 'connected',
+        environment: process.env.NODE_ENV || 'development',
+        sessions: sessions.size
+    });
+});
+
+// Debug endpoint for production issues (admin only)
+app.get('/api/debug', requireAuth, (req, res) => {
+    const envVars = {
+        NODE_ENV: process.env.NODE_ENV || 'not set',
+        PORT: process.env.PORT || 'not set',
+        ADMIN_USERNAME: process.env.ADMIN_USERNAME ? 'set' : 'not set',
+        ADMIN_PASSWORD: process.env.ADMIN_PASSWORD ? 'set' : 'not set',
+        ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS || 'not set',
+        COOKIE_DOMAIN: process.env.COOKIE_DOMAIN || 'not set',
+        DB_PATH: process.env.DB_PATH || 'default (./app.db)'
+    };
+    
+    res.json({
+        status: 'Debug Info',
+        timestamp: new Date().toISOString(),
+        environment: envVars,
+        activeSessions: sessions.size,
+        requestHeaders: {
+            origin: req.headers.origin || 'not set',
+            userAgent: req.headers['user-agent'] || 'not set',
+            host: req.headers.host || 'not set',
+            referer: req.headers.referer || 'not set'
+        },
+        databasePath: dbPath,
+        workingDirectory: process.cwd()
     });
 });
 
