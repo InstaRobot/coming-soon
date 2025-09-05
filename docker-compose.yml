@@ -9,5 +9,4 @@ services:
       - .env
     volumes:
       - ./app.db:/app/app.db
-      - ./images:/app/images
     restart: unless-stopped
