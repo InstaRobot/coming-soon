@@ -11,10 +11,39 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
-app.use(cors({
-    origin: '*',
-    credentials: true
-}));
+// CORS configuration for both development and production
+const corsOptions = {
+    origin: function (origin, callback) {
+        // Allow requests with no origin (mobile apps, etc.)
+        if (!origin) return callback(null, true);
+
+        // Allow all origins in development
+        if (process.env.NODE_ENV !== 'production') {
+            return callback(null, true);
+        }
+
+        // In production, check allowed origins
+        const allowedOrigins = process.env.ALLOWED_ORIGINS ?
+            process.env.ALLOWED_ORIGINS.split(',') :
+            ['https://yourdomain.com', 'https://www.yourdomain.com'];
+
+        if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+
+        // For now, allow all for simplicity (remove this in production)
+        return callback(null, true);
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+};
+
+app.use(cors(corsOptions));
+
+// Handle preflight OPTIONS requests
+app.options('*', cors(corsOptions));
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -29,11 +58,14 @@ let targetDate = new Date('2025-10-01T00:00:00.000Z');
 // Admin authentication middleware
 function requireAuth(req, res, next) {
     const sessionId = req.cookies?.sessionId || req.headers['x-session-id'];
-    
+    console.log('Auth check - Session ID:', sessionId ? 'present' : 'missing');
+    console.log('Auth check - Sessions count:', sessions.size);
+
     if (!sessionId || !sessions.has(sessionId)) {
-        return res.status(401).json({ 
-            success: false, 
-            message: 'Unauthorized' 
+        console.log('Auth failed - no valid session');
+        return res.status(401).json({
+            success: false,
+            message: 'Unauthorized'
         });
     }
     
@@ -252,7 +284,8 @@ app.post('/api/admin/login', (req, res) => {
         
         res.cookie('sessionId', sessionId, {
             httpOnly: true,
-            secure: false, // Set to true in production with HTTPS
+            secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
             maxAge: SESSION_DURATION
         });
         
