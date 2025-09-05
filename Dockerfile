@@ -13,12 +13,17 @@ RUN npm ci --only=production --no-audit --no-fund && npm cache clean --force
 # Копирование исходного кода
 COPY . .
 
-# Создание непривилегированного пользователя
+# Создание файла базы данных если его нет
+RUN touch app.db || true
+
+# Создание непривилегированного пользователя  
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
 
-# Изменение владельца файлов
-RUN chown -R nodejs:nodejs /app
+# Изменение владельца файлов (включая базу данных)
+RUN chown -R nodejs:nodejs /app && \
+    chmod 666 app.db || true
+
 USER nodejs
 
 # Порт приложения настраивается через переменную PORT (динамически)

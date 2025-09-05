@@ -13,5 +13,5 @@ services:
     env_file:
       - .env  # основной файл переменных окружения
     volumes:
-      - ./app.db:/app/app.db
+      - ./app.db:/app/app.db:rw
     restart: unless-stopped

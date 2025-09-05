@@ -102,15 +102,51 @@ app.get('/robots.txt', (req, res) => {
     res.sendFile(path.join(__dirname, 'robots.txt'));
 });
 
-// Database setup
+// Database setup with retry logic
 const dbPath = process.env.DB_PATH || './app.db';
+const fs = require('fs');
+
 console.log('Attempting to connect to database at:', dbPath);
+console.log('Current working directory:', process.cwd());
+
+// Ensure database file exists
+try {
+    if (!fs.existsSync(dbPath)) {
+        console.log('Database file does not exist, creating:', dbPath);
+        fs.writeFileSync(dbPath, '', { mode: 0o666 });
+    }
+    
+    const stats = fs.statSync(dbPath);
+    console.log('Database file stats:', {
+        size: stats.size,
+        mode: stats.mode.toString(8),
+        accessible: fs.accessSync ? 'checking...' : 'unknown'
+    });
+    
+    // Check if file is readable and writable
+    fs.accessSync(dbPath, fs.constants.R_OK | fs.constants.W_OK);
+    console.log('Database file is readable and writable');
+    
+} catch (error) {
+    console.error('Error with database file:', error.message);
+    console.log('Attempting to create database file...');
+    
+    try {
+        fs.writeFileSync(dbPath, '', { mode: 0o666 });
+        console.log('Database file created successfully');
+    } catch (createError) {
+        console.error('Failed to create database file:', createError.message);
+        console.error('This is likely a file system permissions issue');
+        process.exit(1);
+    }
+}
+
 const db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
         console.error('Error opening database:', err.message);
         console.error('Database path:', dbPath);
-        console.error('Current working directory:', process.cwd());
-        process.exit(1); // Exit if database cannot be opened
+        console.error('This is a critical error, server cannot continue');
+        process.exit(1);
     } else {
         console.log('Connected to SQLite database at:', dbPath);
         initDatabase();
