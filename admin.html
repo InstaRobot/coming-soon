@@ -167,12 +167,12 @@
                     loadCurrentTargetDate();
                     loadCurrentProjectName();
                 } else {
-                    // Not authenticated, redirect to main page
-                    window.location.href = '/';
+                    // Not authenticated, redirect to login page
+                    window.location.href = '/admin-login';
                 }
             } catch (error) {
                 console.error('Auth check error:', error);
-                window.location.href = '/';
+                window.location.href = '/admin-login';
             }
         }
 

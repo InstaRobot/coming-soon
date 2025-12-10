@@ -52,7 +52,7 @@
                 
                 if (response.ok) {
                     // Already authenticated, redirect to admin panel
-                    window.location.href = '/admin.html';
+                    window.location.href = '/admin';
                 }
             } catch (error) {
                 // Not authenticated, stay on login page
@@ -97,7 +97,7 @@
                 if (data.success) {
                     showSuccess(locales[currentLang].loginSuccess);
                     setTimeout(() => {
-                        window.location.href = '/admin.html';
+                        window.location.href = '/admin';
                     }, 1000);
                 } else {
                     showError(data.message || locales[currentLang].authError);
