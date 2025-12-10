@@ -340,15 +340,16 @@ app.post('/api/admin/login', (req, res) => {
         });
         
         // Cookie configuration for production/development
+        // secure: включаем только если явно задано COOKIE_SECURE=true (иначе на http кука не сохранится)
         const cookieOptions = {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production', // HTTPS only in production
-            sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax', // Fixed: use 'strict' instead of 'none'
+            secure: process.env.COOKIE_SECURE === 'true',
+            sameSite: 'lax', // не блокирует переходы с той же схемы
             maxAge: SESSION_DURATION
         };
 
-        // Add domain if specified in production
-        if (process.env.NODE_ENV === 'production' && process.env.COOKIE_DOMAIN) {
+        // Add domain if specified
+        if (process.env.COOKIE_DOMAIN) {
             cookieOptions.domain = process.env.COOKIE_DOMAIN;
         }
 
